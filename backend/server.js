@@ -6,6 +6,8 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const ALLOWED_DOMAINS = ['google.com', 'www.google.com'];
+
 app.use(cors());
 app.use(express.json());
 
@@ -38,6 +40,19 @@ app.get('/track-and-go', async (req, res) => {
   const { target_url } = req.query;
   const userAgent = req.get('user-agent');
 
+  if (!target_url) {
+    return res.status(400).send('Missing target_url parameter');
+  }
+
+  try {
+    const urlObj = new URL(target_url);
+    if (!ALLOWED_DOMAINS.includes(urlObj.hostname)) {
+      return res.status(400).send('Security Alert: Redirect to untrusted domain blocked.');
+    }
+  } catch (error) {
+    return res.status(400).send('Security Alert: Redirect to untrusted domain blocked.');
+  }
+
   try {
     await pool.query(
       'INSERT INTO access_logs (user_agent) VALUES ($1)',
@@ -47,16 +62,16 @@ app.get('/track-and-go', async (req, res) => {
     console.error('Logging error:', error);
   }
 
-  if (target_url) {
-    res.redirect(target_url);
-  } else {
-    res.status(400).send('Missing target_url parameter');
-  }
+  res.redirect(target_url);
 });
 
 app.get('/status-check', (req, res) => {
   const { difficulty } = req.query;
   const n = parseInt(difficulty) || 10;
+
+  if (n > 20) {
+    return res.status(400).json({ error: 'Security Alert: Input too high. Operation blocked to prevent DoS.' });
+  }
 
   console.log(`Processing status check with difficulty: ${n}`);
 
