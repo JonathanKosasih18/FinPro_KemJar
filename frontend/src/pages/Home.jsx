@@ -20,10 +20,14 @@ function Home() {
     setLoading(true);
     setStatusMessage('Checking...');
 
+    const startTime = Date.now();
+
     try {
       const response = await fetch(`${API_URL}/status-check?difficulty=10`);
+      const endTime = Date.now();
+      const elapsedTime = endTime - startTime;
       const data = await response.json();
-      setStatusMessage(`Online - Response time: ${data.processingTime}`);
+      setStatusMessage(`Online - Server time: ${data.processingTime}, Total time: ${elapsedTime}ms`);
     } catch (error) {
       setStatusMessage('Error: Server unreachable');
     } finally {
